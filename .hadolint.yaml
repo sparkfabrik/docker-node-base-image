@@ -1,0 +1,8 @@
+# DL3008/DL3018: distro packages (build-essential, python3) intentionally track
+# the base image's repositories; the weekly rebuild picks up patched versions,
+# and exact pins would break every time Alpine or Debian rotates them.
+# DL3066: the `node` user is created with a fixed numeric UID in the Dockerfile.
+ignored:
+  - DL3008
+  - DL3018
+  - DL3066
