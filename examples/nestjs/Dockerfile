@@ -2,9 +2,9 @@
 
 # Example: NestJS on the SparkFabrik Node.js base image.
 # BASE_IMAGE defaults to the local build; CI/consumers would use
-# ghcr.io/sparkfabrik/docker-node-base-image.
-ARG BASE_IMAGE=docker-node-base-image
-ARG BASE_TAG=24-alpine3.23
+# ghcr.io/sparkfabrik/node.
+ARG BASE_IMAGE=sparkfabrik/node
+ARG BASE_TAG=24-alpine
 
 FROM ${BASE_IMAGE}:${BASE_TAG}-dev AS build
 
