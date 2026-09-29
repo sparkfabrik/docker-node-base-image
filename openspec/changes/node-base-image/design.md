@@ -87,13 +87,16 @@ The team chose the DHI philosophy without `dhi/node` as base. Precedents are the
 - Before promotion, a step compares the digests about to be tagged with the digests tested in the run and fails on any mismatch.
 - Trivy is version-pinned and its database is cached, so the weekly build does not fail on a scanner change alone.
 - The cleanup job runs in dry-run on a test package before it deletes anything in `ghcr.io/sparkfabrik/node`.
+- `examples/` (NestJS, Next.js) are consumer integration tests and executable documentation, not image tests. They stay minimal: one route, the framework, and `sharp`.
+- Examples build only on the newest LTS entry of each variant, on both architectures. They block pull requests; on the default branch a failure opens an issue instead of blocking the security rebuild, since npm registry outages are not image defects.
+- Example lockfiles raise Dependabot alerts that are not image vulnerabilities. Renovate refreshes them in one monthly `chore(deps)` pull request with automerge, and the README states that `examples/` is not shipped in the image.
 
 ### Releases
 
 - Consumers follow image tags, not repository versions, so rebuilds and Node.js patch bumps are not releases. A release marks a change to the image contract: a new or retired line, the tag scheme, or entrypoint behavior.
 - `release-please` keeps a release pull request open with the next version and the `CHANGELOG.md` update. Merging it creates the git tag and the GitHub release.
 - Renovate commits use `chore(deps)` and stay out of the changelog. Node.js line bumps use `fix(deps)` because consumers see them.
-- The repository version goes into the `org.opencontainers.image.version` label, so an image traces back to its contract.
+- The repository version goes into the `org.opencontainers.image.version` label, so an image traces back to its contract. A rebuild without a release keeps the label and changes only the digest; `revision` and the digest identify the exact content.
 - Rejected: `semantic-release`, which releases on every `feat` or `fix` merge and would release on each automerged update. Rejected: `git-cliff`, which leaves tags and GitHub releases to separate tooling.
 
 ### Updates

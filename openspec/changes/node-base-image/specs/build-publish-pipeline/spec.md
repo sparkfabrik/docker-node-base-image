@@ -54,6 +54,25 @@ The vulnerability scanner version SHALL be pinned and its database cached betwee
 - **WHEN** the publish workflow is inspected
 - **THEN** the scanner is referenced by an exact version, not `latest`
 
+### Requirement: Example integration tests
+
+The NestJS and Next.js examples SHALL build from the local images of the newest LTS entry of each variant and pass their smoke tests on both architectures. A failure SHALL block a pull request. On the default branch, a failure SHALL open an issue and SHALL NOT block publication.
+
+#### Scenario: Example subset
+
+- **WHEN** the pipeline runs with lines 22 and 24 in the matrix
+- **THEN** examples build only on the line 24 Alpine and Debian images
+
+#### Scenario: Example failure on a pull request
+
+- **WHEN** the Next.js smoke test fails on a pull request
+- **THEN** the pull request check fails
+
+#### Scenario: Example failure on the default branch
+
+- **WHEN** the NestJS build fails on the weekly rebuild because the npm registry is unreachable
+- **THEN** the images are still published and an issue reports the failure
+
 ### Requirement: Pull request checks
 
 Pull requests SHALL run every check with the publish policy, without registry credentials and without pushing.

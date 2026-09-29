@@ -103,6 +103,11 @@ The SparkFabrik GitHub App SHALL author all update pull requests, so the pipelin
 - **WHEN** npm publishes a new version
 - **THEN** a pull request updates `NPM_VERSION`
 
+#### Scenario: Example dependencies
+
+- **WHEN** a month passes
+- **THEN** one `chore(deps)` pull request refreshes the example lockfiles and merges when green
+
 #### Scenario: Action release
 
 - **WHEN** a pinned GitHub Action publishes a new version

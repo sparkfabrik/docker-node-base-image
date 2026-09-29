@@ -180,6 +180,11 @@ Every image SHALL carry `org.opencontainers.image.source`, `version`, `revision`
 - **WHEN** an image is built after release `v1.2.0`
 - **THEN** `org.opencontainers.image.version` is `1.2.0`
 
+#### Scenario: Rebuild without release
+
+- **WHEN** the weekly rebuild runs with no new release since `v1.2.0`
+- **THEN** `org.opencontainers.image.version` stays `1.2.0` and `revision` names the build commit
+
 #### Scenario: Source and revision
 
 - **WHEN** a consumer reads `source` and `revision`
