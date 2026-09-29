@@ -83,6 +83,11 @@ The SparkFabrik GitHub App SHALL author all update pull requests, so the pipelin
 - **WHEN** upstream publishes `24.21.1-alpine3.24` and `24.21.1-bookworm-slim`
 - **THEN** one pull request updates both line 24 entries and the Dockerfile default
 
+#### Scenario: Commit types
+
+- **WHEN** Renovate opens a Node.js line bump and an npm update
+- **THEN** the Node.js bump uses a `fix(deps)` commit and the npm update uses `chore(deps)`
+
 #### Scenario: Pipeline runs unattended
 
 - **WHEN** the App opens an update pull request

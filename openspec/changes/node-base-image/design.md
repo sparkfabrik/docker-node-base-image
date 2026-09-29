@@ -80,6 +80,22 @@ The team chose the DHI philosophy without `dhi/node` as base. Precedents are the
 - Publishes are serialized by a `concurrency` group. A weekly multi-arch aware job cleans untagged versions older than 7 days.
 - Rejected: one QEMU build, which is slow and proves nothing about arm64. Rejected: rebuilding after tests, which publishes an untested image.
 
+### Testing
+
+- Static contract checks (files present or absent, user, environment, labels, empty `Entrypoint`) use `container-structure-test` YAML. Behavior checks (DNS and TLS, `sharp`, `SIGTERM`, the entrypoint) stay in POSIX sh.
+- Negative control: the same suite runs against the upstream `node` image and must fail. A check that passes on upstream proves nothing about hardening.
+- Before promotion, a step compares the digests about to be tagged with the digests tested in the run and fails on any mismatch.
+- Trivy is version-pinned and its database is cached, so the weekly build does not fail on a scanner change alone.
+- The cleanup job runs in dry-run on a test package before it deletes anything in `ghcr.io/sparkfabrik/node`.
+
+### Releases
+
+- Consumers follow image tags, not repository versions, so rebuilds and Node.js patch bumps are not releases. A release marks a change to the image contract: a new or retired line, the tag scheme, or entrypoint behavior.
+- `release-please` keeps a release pull request open with the next version and the `CHANGELOG.md` update. Merging it creates the git tag and the GitHub release.
+- Renovate commits use `chore(deps)` and stay out of the changelog. Node.js line bumps use `fix(deps)` because consumers see them.
+- The repository version goes into the `org.opencontainers.image.version` label, so an image traces back to its contract.
+- Rejected: `semantic-release`, which releases on every `feat` or `fix` merge and would release on each automerged update. Rejected: `git-cliff`, which leaves tags and GitHub releases to separate tooling.
+
 ### Updates
 
 - Renovate runs self-hosted through the SparkFabrik GitHub App (`renovatebot/github-action`, `actions/create-github-app-token`). An App identity lets bot pull requests run workflows unattended.
@@ -88,7 +104,7 @@ The team chose the DHI philosophy without `dhi/node` as base. Precedents are the
 
 ### Layout
 
-`Dockerfile`, `entrypoint.sh`, `tests/` (POSIX sh), `examples/`, `.github/workflows/`, `renovate.json`, `justfile` (same recipes as CI), `README.md`, `CHANGELOG.md`.
+`Dockerfile`, `entrypoint.sh`, `tests/` (POSIX sh), `examples/`, `.github/workflows/`, `renovate.json`, `justfile` (same recipes as CI), `README.md`, `CHANGELOG.md` (maintained by `release-please`), `tests/structure/` (`container-structure-test` YAML).
 
 ## Risks / Trade-offs
 

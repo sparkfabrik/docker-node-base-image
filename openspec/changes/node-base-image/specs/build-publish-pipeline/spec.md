@@ -31,6 +31,29 @@ Contract, entrypoint, example, and vulnerability scan checks SHALL run for every
 - **WHEN** a contract test fails for one entry on one architecture
 - **THEN** no tag of that entry is published in that run
 
+### Requirement: Negative control
+
+The contract test suite SHALL run against the upstream `node` image of each entry and SHALL fail there.
+
+#### Scenario: Upstream image fails the suite
+
+- **WHEN** the production contract suite runs against `node:24.21.0-alpine3.24`
+- **THEN** it reports at least the shell and package manager checks as failed
+
+#### Scenario: Suite passes on upstream
+
+- **WHEN** the contract suite passes against the upstream image
+- **THEN** the pipeline fails, because the suite no longer detects hardening
+
+### Requirement: Pinned scanner
+
+The vulnerability scanner version SHALL be pinned and its database cached between runs.
+
+#### Scenario: Scanner version
+
+- **WHEN** the publish workflow is inspected
+- **THEN** the scanner is referenced by an exact version, not `latest`
+
 ### Requirement: Pull request checks
 
 Pull requests SHALL run every check with the publish policy, without registry credentials and without pushing.
@@ -48,6 +71,11 @@ Promoted manifests SHALL be the digests that passed tests and scan in the same r
 
 - **WHEN** an entry is promoted
 - **THEN** the digests behind its tags equal the digests tested in that run and already carry SBOM and provenance
+
+#### Scenario: Digest mismatch
+
+- **WHEN** a digest about to be tagged differs from every digest tested in the run
+- **THEN** promotion fails and no tag moves
 
 ### Requirement: Native multi-arch publication
 
@@ -76,6 +104,11 @@ A weekly job SHALL delete untagged package versions older than 7 days. It SHALL 
 - **WHEN** the cleanup runs after a failed publish left orphan digests
 - **THEN** the orphans are deleted and every tag still pulls on both architectures
 
+#### Scenario: Dry run before activation
+
+- **WHEN** the cleanup is first configured
+- **THEN** it runs in dry-run mode against a test package and lists what it would delete, without deleting
+
 #### Scenario: Cleanup during a publish
 
 - **WHEN** the cleanup is scheduled while a publish runs
@@ -94,3 +127,22 @@ The publish job SHALL use the workflow token with `contents: read`, `packages: w
 
 - **WHEN** the cleanup workflow is inspected
 - **THEN** it declares no `contents: write`, `security-events`, or `id-token` permission
+
+### Requirement: Releases
+
+A release SHALL be created only by merging the release pull request that `release-please` maintains. The release SHALL create a git tag, a GitHub release, and the matching `CHANGELOG.md` entry. Commits typed `chore(deps)` SHALL NOT appear in the changelog.
+
+#### Scenario: Release pull request
+
+- **WHEN** a `feat` or `fix` commit lands on the default branch
+- **THEN** the release pull request updates its proposed version and changelog, and no release is created yet
+
+#### Scenario: Release on merge
+
+- **WHEN** a maintainer merges the release pull request
+- **THEN** a git tag and a GitHub release are created with the changelog entry
+
+#### Scenario: Dependency chores
+
+- **WHEN** Renovate merges a `chore(deps)` update
+- **THEN** the release pull request changelog does not list it

@@ -4,9 +4,11 @@
 
 - [ ] 1.1 Spike the Alpine assembly with `apk add --root /rootfs --initdb` for the allowlist, compare with the purge approach on size, Trivy package list, and runtime check; record the winner in the "Production runtime" section of design.md and verify `openspec validate --strict` passes
 - [ ] 1.2 Write `Dockerfile` stages `strip`, `clean`, `prod` for Debian slim and Alpine from `ARG NODE_IMAGE_TAG` (OS upgrade, `ca-certificates` and `netbase` on Debian, allowlist purge or assembly, maintainer script removal, dangling symlink cleanup, root-owned `/app`, `WORKDIR` before `USER 1000:1000`, `NODE_ENV=production`, OCI labels, `CMD ["node"]`, no `ENTRYPOINT`) and verify `docker build --target prod` succeeds for `24-alpine` and `24-slim`
-- [ ] 1.3 Write `tests/image_verify.sh` (POSIX sh) covering the `image-variants` production scenarios: runtime script (file, DNS, TLS, timezone), no shell or package manager executable and no dangling symlink to one, `/app` read-only for UID 1000, UID 1000 default, REPL as PID 1 with no command, `NODE_ENV`, OCI labels, package database detected by Trivy with only retained packages; verify it passes on both variants locally
-- [ ] 1.4 Add the `sharp` prebuilt fixture to `tests/` and verify `image_verify.sh` loads it and processes an image on both variants
-- [ ] 1.5 Update `.hadolint.yaml` for the new stages (drop the stale DL3066 comment) and verify `hadolint Dockerfile` passes
+- [ ] 1.3 Write `tests/structure/prod.yaml` for `container-structure-test` covering the static `image-variants` checks (no shell or package manager, no dangling symlink, no toolchain, UID 1000, `NODE_ENV`, OCI labels, empty `Entrypoint` and `Healthcheck`), and verify it passes on both variants
+- [ ] 1.4 Write `tests/image_verify.sh` (POSIX sh) for the behavior checks (file, DNS, TLS, timezone, read-only `/app`, PID 1, `SIGTERM`, package database seen by Trivy), and verify it passes on both variants
+- [ ] 1.5 Add a negative-control recipe that runs both suites against the upstream `node` image of each entry and passes only if they fail there; verify it fails on upstream `node:24-alpine`
+- [ ] 1.6 Add the `sharp` prebuilt fixture to `tests/` and verify `image_verify.sh` loads it and processes an image on both variants
+- [ ] 1.7 Update `.hadolint.yaml` for the new stages (drop the stale DL3066 comment) and verify `hadolint Dockerfile` passes
 
 ## 2. Development image and entrypoint
 
@@ -23,24 +25,24 @@
 ## 4. Publish pipeline
 
 - [ ] 4.1 Write `.github/workflows/publish.yml` with the matrix (lines 22 and 24, both variants) as one env list surfaced through a job output, and a `lint` job (hadolint, shellcheck); verify the workflow parses with `actionlint`
-- [ ] 4.2 Add the pull request path: native amd64 and arm64 runners, `--load` build of both flavors, `image_verify.sh`, `entrypoint_test.sh`, `examples_test.sh`, Trivy scan failing on any fixable finding with SARIF upload; verify a draft pull request runs green without registry credentials
+- [ ] 4.2 Add the pull request path: native amd64 and arm64 runners, `--load` build of both flavors, structure tests, `image_verify.sh`, `entrypoint_test.sh`, `examples_test.sh`, the negative control, a version-pinned Trivy with cached database failing on any fixable finding with SARIF upload; verify a draft pull request runs green without registry credentials
 - [ ] 4.3 Add the default-branch, weekly schedule, and dispatch path: build once per flavor and architecture with `provenance: mode=max`, `sbom: true`, `push-by-digest=true`, then pull each digest and run tests and scan on it; verify the run summary shows the tested digests
-- [ ] 4.4 Add promotion with `docker buildx imagetools create` into `<full tag>` and `<major>-<variant>` for both flavors, write the tag-to-digest mapping to the run summary, and set the `concurrency` group with `cancel-in-progress: false` and job permissions `contents: read`, `packages: write`, `security-events: write`; verify `imagetools inspect` on a published tag lists both platforms with SBOM and provenance
+- [ ] 4.4 Add a pre-promotion step that compares the digests to tag with the tested digests and fails on mismatch, verified by a forced mismatch in a test run. Add promotion with `docker buildx imagetools create` into `<full tag>` and `<major>-<variant>` for both flavors, write the tag-to-digest mapping to the run summary, and set the `concurrency` group with `cancel-in-progress: false` and job permissions `contents: read`, `packages: write`, `security-events: write`; verify `imagetools inspect` on a published tag lists both platforms with SBOM and provenance
 - [ ] 4.5 Add the SBOM assertion to the publish path (the SBOM of each pushed digest lists package `node` at the matrix version) and verify it fails on a digest whose SBOM lacks it
 - [ ] 4.6 Add `.trivyignore.yaml` support with `expired_at` and a check that fails the scan on an expired entry; verify with a fixture entry dated in the past
-- [ ] 4.7 Add the weekly registry cleanup job with a multi-arch aware action deleting untagged versions older than 7 days, in the same concurrency group with the minimal permissions its README requires; verify after a run that every published tag still pulls on both architectures
+- [ ] 4.7 Add the weekly registry cleanup job with a multi-arch aware action deleting untagged versions older than 7 days, in the same concurrency group with the minimal permissions its README requires; run it first in dry-run against a test package, then verify after a real run that every published tag still pulls on both architectures
 
 ## 5. Automated updates
 
 - [ ] 5.1 Install the SparkFabrik GitHub App on the repository, confirm it grants Contents, Pull requests, Checks, Commit statuses, Workflows write and Metadata read, and verify the App id and private key are stored as repository secrets
-- [ ] 5.2 Write `renovate.json`: `dockerfile` manager for `ARG NODE_IMAGE_TAG`, regex `customManagers` for the workflow matrix with `datasourceTemplate: docker`, `depNameTemplate: node`, `versioningTemplate: docker`, a second regex manager with `loose` versioning for distro bumps without automerge, npm datasource for `NPM_VERSION`, GitHub Actions digest pinning, `packageRules` grouping per Node.js major with `automerge: true`; verify with `renovate-config-validator`
+- [ ] 5.2 Write `renovate.json`: `dockerfile` manager for `ARG NODE_IMAGE_TAG`, regex `customManagers` for the workflow matrix with `datasourceTemplate: docker`, `depNameTemplate: node`, `versioningTemplate: docker`, a second regex manager with `loose` versioning for distro bumps without automerge, npm datasource for `NPM_VERSION`, GitHub Actions digest pinning, `packageRules` grouping per Node.js major with `automerge: true`, `semanticCommitType` `fix` for Node.js line bumps and `chore` for the rest; verify with `renovate-config-validator`
 - [ ] 5.3 Write `.github/workflows/renovate.yml` running `renovatebot/github-action` on a schedule with a token from `actions/create-github-app-token`; verify a dry run (`RENOVATE_DRY_RUN=full`) lists the expected dependencies
 - [ ] 5.4 Configure branch protection on the default branch requiring the lint, test, and scan checks, and verify an update pull request opened by the App runs the pipeline without manual approval and merges on green
 
 ## 6. Documentation
 
 - [ ] 6.1 Write `README.md` in the `man` style: image name and tags, variants, what prod contains and excludes, consumer patterns (multi-stage on `-dev`, `CMD` exec form, `SIGTERM` handler with reference to nodejs/docker-node BestPractices, `docker run --init`, `.next/cache` chown, Prisma 6 and `libssl`), digest pinning with Renovate `pinDigests`, debugging without a shell, rebuild policy, out-of-scope consumers; verify every command in the README runs as written against a local build
-- [ ] 6.2 Write `CHANGELOG.md` (Keep a Changelog 1.1.0) with an `Unreleased` section listing the initial lines and tag scheme, and verify the format with a markdown lint pass
+- [ ] 6.2 Add `release-please` (workflow, `release-please-config.json`, manifest) with changelog sections that exclude `chore(deps)`, pass the release version to the `org.opencontainers.image.version` label, and verify a test `fix` commit updates the release pull request without creating a release
 - [ ] 6.3 Update `CLAUDE.md` commands section to the `just` recipes and verify each listed command exists in the `justfile`
 
 ## 7. Matrix lifecycle

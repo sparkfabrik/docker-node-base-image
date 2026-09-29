@@ -175,6 +175,11 @@ Every image SHALL carry `org.opencontainers.image.source`, `version`, `revision`
 - **WHEN** a consumer inspects a published tag
 - **THEN** all six labels are set
 
+#### Scenario: Version label
+
+- **WHEN** an image is built after release `v1.2.0`
+- **THEN** `org.opencontainers.image.version` is `1.2.0`
+
 #### Scenario: Source and revision
 
 - **WHEN** a consumer reads `source` and `revision`
